@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+if [[ -z "${rhasspyspeakers_cli_hermes_dir}" ]]; then
+    this_dir="$( cd "$( dirname "$0" )" && pwd )"
+    rhasspyspeakers_cli_hermes_dir="${this_dir}/../lib/rhasspyspeakers_cli_hermes"
+fi
+
+"${rhasspyspeakers_cli_hermes_dir}/rhasspyspeakers_cli_hermes" "$@"
