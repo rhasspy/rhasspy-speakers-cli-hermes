@@ -1,0 +1,7 @@
+__pycache__/
+.mypy_cache/
+.venv/
+debian/rhasspy-speakers-cli-hermes*
+dist/
+*.egg-info/
+pyinstaller/
