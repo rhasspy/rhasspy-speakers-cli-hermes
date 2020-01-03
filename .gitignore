@@ -5,3 +5,4 @@ debian/rhasspy-speakers-cli-hermes*
 dist/
 *.egg-info/
 pyinstaller/
+.vscode/

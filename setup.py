@@ -1,3 +1,4 @@
+"""Setup script for rhasspy-speakers-cli-hermes package"""
 import os
 import setuptools
 
