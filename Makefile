@@ -1,5 +1,6 @@
 SHELL := bash
 PYTHON_FILES = rhasspyspeakers_cli_hermes/*.py *.py
+SHELL_FILES = bin/* debian/bin/*
 
 .PHONY: check venv dist sdist pyinstaller debian docker
 
@@ -14,6 +15,7 @@ check:
 	pylint $(PYTHON_FILES)
 	mypy $(PYTHON_FILES)
 	black .
+	bashate $(SHELL_FILES)
 	pip list --outdated
 
 venv:
