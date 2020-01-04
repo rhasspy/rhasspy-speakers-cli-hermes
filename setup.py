@@ -1,3 +1,4 @@
+"""Setup script for rhasspy-speakers-cli-hermes package"""
 import os
 import setuptools
 
@@ -21,6 +22,9 @@ setuptools.setup(
     install_requires=requirements,
     classifiers=[
         "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
         "License :: OSI Approved :: MIT License",
     ],
     long_description=long_description,

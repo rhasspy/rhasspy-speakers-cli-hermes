@@ -1,4 +1,6 @@
 SHELL := bash
+PYTHON_FILES = rhasspyspeakers_cli_hermes/*.py *.py
+SHELL_FILES = bin/* debian/bin/*
 
 .PHONY: check venv dist sdist pyinstaller debian docker
 
@@ -9,15 +11,20 @@ debian_package := rhasspy-speakers-cli-hermes_$(version)_$(architecture)
 debian_dir := debian/$(debian_package)
 
 check:
-	flake8 rhasspyspeakers_cli_hermes/*.py
-	pylint rhasspyspeakers_cli_hermes/*.py
-	mypy rhasspyspeakers_cli_hermes/*.py
+	flake8 $(PYTHON_FILES)
+	pylint $(PYTHON_FILES)
+	mypy $(PYTHON_FILES)
+	black .
+	bashate $(SHELL_FILES)
+	pip list --outdated
 
 venv:
 	rm -rf .venv/
 	python3 -m venv .venv
+	.venv/bin/pip3 install --upgrade pip
 	.venv/bin/pip3 install wheel setuptools
-	.venv/bin/pip3 install -r requirements_all.txt
+	.venv/bin/pip3 install -r requirements.txt
+	.venv/bin/pip3 install -r requirements_dev.txt
 
 dist: sdist debian
 
