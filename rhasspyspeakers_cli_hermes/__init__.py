@@ -2,13 +2,12 @@
 import json
 import logging
 import shlex
-import typing
 import subprocess
+import typing
 
 import attr
-
-from rhasspyhermes.base import Message
 from rhasspyhermes.audioserver import AudioPlayBytes, AudioPlayFinished
+from rhasspyhermes.base import Message
 
 _LOGGER = logging.getLogger(__name__)
 
