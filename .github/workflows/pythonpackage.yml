@@ -39,13 +39,13 @@ jobs:
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@master
-    - name: Bump version and push tag
-      uses: maxbachmann/rhasspy-tag-action@master
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      id: bump_tag
-    - name: print tag
-      if: steps.bump_tag.outputs.new_tag
-      run: |
-        echo steps.bump_tag.outputs.new_tag
+      - uses: actions/checkout@master
+      - name: Bump version and push tag
+        uses: maxbachmann/rhasspy-tag-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        id: bump_tag
+      - name: print tag
+        if: steps.bump_tag.outputs.new_tag
+        run: |
+          echo steps.bump_tag.outputs.new_tag
