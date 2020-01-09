@@ -45,7 +45,3 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         id: bump_tag
-      - name: print tag
-        if: steps.bump_tag.outputs.new_tag
-        run: |
-          echo steps.bump_tag.outputs.new_tag
