@@ -11,7 +11,7 @@ _LOGGER = logging.getLogger(__name__)
 
 def main():
     """Main method."""
-    parser = argparse.ArgumentParser(prog="rhasspyspeakers_cli_hermes")
+    parser = argparse.ArgumentParser(prog="rhasspy-speakers-cli-hermes")
     parser.add_argument(
         "--play-command", required=True, help="Command to play WAV data from stdin"
     )
