@@ -49,7 +49,7 @@ sdist:
 # -----------------------------------------------------------------------------
 
 docker: pyinstaller
-	docker build . -t "rhasspy/$(PACKAGE_NAME):$(version)"
+	docker build . -t "rhasspy/$(PACKAGE_NAME):$(version)" -t "rhasspy/$(PACKAGE_NAME):latest"
 
 deploy:
 	echo "$$DOCKER_PASSWORD" | docker login -u "$$DOCKER_USERNAME" --password-stdin
