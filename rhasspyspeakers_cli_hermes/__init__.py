@@ -1,12 +1,14 @@
 """Hermes MQTT server for Rhasspy audio output using external program"""
 import json
 import logging
-import shlex
+import re
 import subprocess
 import typing
 
 import attr
-from rhasspyhermes.audioserver import AudioPlayBytes, AudioPlayFinished
+from rhasspyhermes.audioserver import (AudioDevice, AudioDeviceMode,
+                                       AudioDevices, AudioGetDevices,
+                                       AudioPlayBytes, AudioPlayFinished)
 from rhasspyhermes.base import Message
 
 _LOGGER = logging.getLogger(__name__)
@@ -18,11 +20,13 @@ class SpeakersHermesMqtt:
     def __init__(
         self,
         client,
-        play_command: str,
+        play_command: typing.List[str],
+        list_command: typing.Optional[typing.List[str]] = None,
         siteIds: typing.Optional[typing.List[str]] = None,
     ):
         self.client = client
-        self.play_command: typing.List[str] = shlex.split(play_command)
+        self.play_command = play_command
+        self.list_command = list_command
         self.siteIds = siteIds or []
 
     # -------------------------------------------------------------------------
@@ -39,12 +43,59 @@ class SpeakersHermesMqtt:
         finally:
             yield self.publish(AudioPlayFinished(id=requestId, sessionId=sessionId))
 
+    def handle_get_devices(
+        self, get_devices: AudioGetDevices
+    ) -> typing.Optional[AudioDevices]:
+        """Get available speakers."""
+        if get_devices.modes and (AudioDeviceMode.OUTPUT not in get_devices.modes):
+            return None
+
+        devices: typing.List[AudioDevice] = []
+
+        try:
+            assert self.list_command, "List command is required to get devices"
+            _LOGGER.debug(self.list_command)
+            output = subprocess.check_output(
+                self.list_command, universal_newlines=True
+            ).splitlines()
+
+            name, description = None, ""
+
+            # Parse output of list command (assume like arecord -L)
+            first_speaker = True
+            for line in output:
+                line = line.rstrip()
+                if re.match(r"^\s", line):
+                    description = line.strip()
+                    if first_speaker:
+                        description = description + "*"
+                        first_speaker = False
+                else:
+                    if name is not None:
+                        devices.append(
+                            AudioDevice(
+                                mode=AudioDeviceMode.OUTPUT,
+                                id=name,
+                                name=name,
+                                description=description,
+                            )
+                        )
+
+                    name = line.strip()
+
+        except Exception:
+            _LOGGER.exception("handle_get_devices")
+
+        return AudioDevices(
+            devices=devices, id=get_devices.id, siteId=get_devices.siteId
+        )
+
     # -------------------------------------------------------------------------
 
     def on_connect(self, client, userdata, flags, rc):
         """Connected to MQTT broker."""
         try:
-            topics = []
+            topics = [AudioGetDevices.topic()]
             if self.siteIds:
                 # Subscribe to specific siteIds
                 for siteId in self.siteIds:
@@ -72,6 +123,14 @@ class SpeakersHermesMqtt:
                 for message in self.handle_play(requestId, wav_bytes):
                     if isinstance(message, AudioPlayFinished):
                         self.publish(message, siteId=siteId)
+            elif msg.topic == AudioGetDevices.topic():
+                json_payload = json.loads(msg.payload)
+                if self._check_siteId(json_payload):
+                    result = self.handle_get_devices(
+                        AudioGetDevices.from_dict(json_payload)
+                    )
+                    if result:
+                        self.publish(result)
         except Exception:
             _LOGGER.exception("on_message")
 
@@ -85,3 +144,12 @@ class SpeakersHermesMqtt:
             self.client.publish(topic, payload)
         except Exception:
             _LOGGER.exception("on_message")
+
+    # -------------------------------------------------------------------------
+
+    def _check_siteId(self, json_payload: typing.Dict[str, typing.Any]) -> bool:
+        if self.siteIds:
+            return json_payload.get("siteId", "default") in self.siteIds
+
+        # All sites
+        return True

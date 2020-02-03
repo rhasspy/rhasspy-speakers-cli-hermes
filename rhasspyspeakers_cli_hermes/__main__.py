@@ -1,6 +1,7 @@
 """Hermes MQTT service for Rhasspy audio output with external program."""
 import argparse
 import logging
+import shlex
 
 import paho.mqtt.client as mqtt
 
@@ -14,6 +15,9 @@ def main():
     parser = argparse.ArgumentParser(prog="rhasspy-speakers-cli-hermes")
     parser.add_argument(
         "--play-command", required=True, help="Command to play WAV data from stdin"
+    )
+    parser.add_argument(
+        "--list-command", help="Command to list available output devices"
     )
     parser.add_argument(
         "--host", default="localhost", help="MQTT host (default: localhost)"
@@ -39,9 +43,19 @@ def main():
     _LOGGER.debug(args)
 
     try:
+        args.play_command = shlex.split(args.play_command)
+
+        if args.list_command:
+            args.list_command = shlex.split(args.list_command)
+
         # Listen for messages
         client = mqtt.Client()
-        hermes = SpeakersHermesMqtt(client, args.play_command, siteIds=args.siteId)
+        hermes = SpeakersHermesMqtt(
+            client,
+            args.play_command,
+            list_command=args.list_command,
+            siteIds=args.siteId,
+        )
 
         def on_disconnect(client, userdata, flags, rc):
             try:
