@@ -6,9 +6,14 @@ import subprocess
 import typing
 
 import attr
-from rhasspyhermes.audioserver import (AudioDevice, AudioDeviceMode,
-                                       AudioDevices, AudioGetDevices,
-                                       AudioPlayBytes, AudioPlayFinished)
+from rhasspyhermes.audioserver import (
+    AudioDevice,
+    AudioDeviceMode,
+    AudioDevices,
+    AudioGetDevices,
+    AudioPlayBytes,
+    AudioPlayFinished,
+)
 from rhasspyhermes.base import Message
 
 _LOGGER = logging.getLogger(__name__)
