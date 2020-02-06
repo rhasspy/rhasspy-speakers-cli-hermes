@@ -11,9 +11,6 @@ PIP_INSTALL ?= install
 version := $(shell cat VERSION)
 architecture := $(shell bash architecture.sh)
 
-debian_package := $(PACKAGE_NAME)_$(version)_$(architecture)
-debian_dir := debian/$(debian_package)
-
 # -----------------------------------------------------------------------------
 # Python
 # -----------------------------------------------------------------------------
