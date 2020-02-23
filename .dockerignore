@@ -1,3 +1,6 @@
 *
 !pyinstaller/dist
 !debian/bin
+!requirements.txt
+!rhasspyspeakers_cli_hermes/*.py
+!etc/
