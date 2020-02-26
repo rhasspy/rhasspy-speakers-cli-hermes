@@ -1,6 +1,6 @@
 SHELL := bash
-PYTHON_NAME = rhasspydialogue_hermes
-PACKAGE_NAME = rhasspy-dialogue-hermes
+PACKAGE_NAME = $(shell basename "$$PWD")
+PYTHON_NAME = $(shell echo "$(PACKAGE_NAME)" | sed -e 's/-//' | sed -e 's/-/_/g')
 SOURCE = $(PYTHON_NAME)
 PYTHON_FILES = $(SOURCE)/*.py *.py
 SHELL_FILES = bin/* debian/bin/* *.sh
@@ -16,9 +16,9 @@ version_tag := "rhasspy/$(PACKAGE_NAME):$(version)"
 DOCKER_PLATFORMS = linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6
 
 ifneq (,$(findstring -dev,$(version)))
-	DOCKER_TAGS = -t "rhasspy/$(PACKAGE_NAME):$(version)"
+	DOCKER_TAGS = -t "$(version_tag)"
 else
-	DOCKER_TAGS = -t "rhasspy/$(PACKAGE_NAME):$(version)" -t "rhasspy/$(PACKAGE_NAME):latest"
+	DOCKER_TAGS = -t "$(version_tag)" -t "rhasspy/$(PACKAGE_NAME):latest"
 endif
 
 # -----------------------------------------------------------------------------
@@ -95,14 +95,3 @@ pyinstaller:
 
 debian:
 	scripts/build-debian.sh "$(architecture)" "$(version)"
-
-# -----------------------------------------------------------------------------
-# Downloads
-# -----------------------------------------------------------------------------
-
-# Rhasspy development dependencies
-rhasspy-libs: $(DOWNLOAD_DIR)/rhasspy-hermes-0.1.6.tar.gz
-
-$(DOWNLOAD_DIR)/rhasspy-hermes-0.1.6.tar.gz:
-	mkdir -p "$(DOWNLOAD_DIR)"
-	curl -sSfL -o $@ "https://github.com/rhasspy/rhasspy-hermes/archive/master.tar.gz"
