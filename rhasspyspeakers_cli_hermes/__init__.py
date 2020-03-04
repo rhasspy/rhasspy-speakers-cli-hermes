@@ -46,7 +46,7 @@ class SpeakersHermesMqtt:
         except Exception:
             _LOGGER.exception("handle_play")
         finally:
-            yield self.publish(AudioPlayFinished(id=requestId, sessionId=sessionId))
+            yield AudioPlayFinished(id=requestId, sessionId=sessionId)
 
     def handle_get_devices(
         self, get_devices: AudioGetDevices
