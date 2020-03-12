@@ -7,7 +7,9 @@ import paho.mqtt.client as mqtt
 
 from . import SpeakersHermesMqtt
 
-_LOGGER = logging.getLogger(__name__)
+_LOGGER = logging.getLogger("rhasspyspeakers_cli_hermes")
+
+# -----------------------------------------------------------------------------
 
 
 def main():

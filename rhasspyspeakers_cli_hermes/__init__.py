@@ -16,7 +16,9 @@ from rhasspyhermes.audioserver import (
 )
 from rhasspyhermes.base import Message
 
-_LOGGER = logging.getLogger(__name__)
+_LOGGER = logging.getLogger("rhasspyspeakers_cli_hermes")
+
+# -----------------------------------------------------------------------------
 
 
 class SpeakersHermesMqtt:
