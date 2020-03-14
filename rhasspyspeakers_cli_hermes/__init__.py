@@ -140,6 +140,7 @@ class SpeakersHermesMqtt:
                         self.publish(result)
         except Exception:
             _LOGGER.exception("on_message")
+            _LOGGER.error("%s %s", msg.topic, msg.payload)
 
     def publish(self, message: Message, **topic_args):
         """Publish a Hermes message to MQTT."""
