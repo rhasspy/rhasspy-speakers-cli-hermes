@@ -1,11 +1,10 @@
 """Hermes MQTT server for Rhasspy audio output using external program"""
-import json
+import asyncio
 import logging
 import re
 import subprocess
 import typing
 
-import attr
 from rhasspyhermes.audioserver import (
     AudioDevice,
     AudioDeviceMode,
@@ -15,13 +14,14 @@ from rhasspyhermes.audioserver import (
     AudioPlayFinished,
 )
 from rhasspyhermes.base import Message
+from rhasspyhermes.client import HermesClient, TopicArgs
 
 _LOGGER = logging.getLogger("rhasspyspeakers_cli_hermes")
 
 # -----------------------------------------------------------------------------
 
 
-class SpeakersHermesMqtt:
+class SpeakersHermesMqtt(HermesClient):
     """Hermes MQTT server for Rhasspy audio output using external program."""
 
     def __init__(
@@ -30,17 +30,29 @@ class SpeakersHermesMqtt:
         play_command: typing.List[str],
         list_command: typing.Optional[typing.List[str]] = None,
         siteIds: typing.Optional[typing.List[str]] = None,
+        loop=None,
     ):
-        self.client = client
+        super().__init__(
+            "rhasspyspeakers_cli_hermes", client, siteIds=siteIds, loop=loop
+        )
+
+        self.subscribe(AudioPlayBytes, AudioGetDevices)
+
         self.play_command = play_command
         self.list_command = list_command
-        self.siteIds = siteIds or []
+
+        # Event loop
+        self.loop = loop or asyncio.get_event_loop()
 
     # -------------------------------------------------------------------------
 
-    def handle_play(
-        self, requestId: str, wav_bytes: bytes, sessionId: str = ""
-    ) -> typing.Iterable[AudioPlayFinished]:
+    async def handle_play(
+        self,
+        requestId: str,
+        wav_bytes: bytes,
+        siteId: str = "default",
+        sessionId: str = "",
+    ) -> typing.AsyncIterable[typing.Tuple[AudioPlayFinished, TopicArgs]]:
         """Play WAV using external program."""
         try:
             _LOGGER.debug(self.play_command)
@@ -48,14 +60,17 @@ class SpeakersHermesMqtt:
         except Exception:
             _LOGGER.exception("handle_play")
         finally:
-            yield AudioPlayFinished(id=requestId, sessionId=sessionId)
+            yield (
+                AudioPlayFinished(id=requestId, sessionId=sessionId),
+                {"siteId": siteId},
+            )
 
-    def handle_get_devices(
+    async def handle_get_devices(
         self, get_devices: AudioGetDevices
-    ) -> typing.Optional[AudioDevices]:
+    ) -> typing.AsyncIterable[AudioDevices]:
         """Get available speakers."""
         if get_devices.modes and (AudioDeviceMode.OUTPUT not in get_devices.modes):
-            return None
+            return
 
         devices: typing.List[AudioDevice] = []
 
@@ -93,71 +108,30 @@ class SpeakersHermesMqtt:
         except Exception:
             _LOGGER.exception("handle_get_devices")
 
-        return AudioDevices(
+        yield AudioDevices(
             devices=devices, id=get_devices.id, siteId=get_devices.siteId
         )
 
     # -------------------------------------------------------------------------
 
-    def on_connect(self, client, userdata, flags, rc):
-        """Connected to MQTT broker."""
-        try:
-            topics = [AudioGetDevices.topic()]
-            if self.siteIds:
-                # Subscribe to specific siteIds
-                for siteId in self.siteIds:
-                    topics.append(AudioPlayBytes.topic(siteId=siteId, requestId="#"))
-            else:
-                # Subscribe to all siteIds
-                topics.append(AudioPlayBytes.topic(siteId="+", requestId="#"))
-
-            for topic in topics:
-                self.client.subscribe(topic)
-                _LOGGER.debug("Subscribed to %s", topic)
-        except Exception:
-            _LOGGER.exception("on_connect")
-
-    def on_message(self, client, userdata, msg):
+    async def on_message(
+        self,
+        message: Message,
+        siteId: typing.Optional[str] = None,
+        sessionId: typing.Optional[str] = None,
+        topic: typing.Optional[str] = None,
+    ):
         """Received message from MQTT broker."""
-        try:
-            _LOGGER.debug("Received %s byte(s) on %s", len(msg.payload), msg.topic)
-
-            if AudioPlayBytes.is_topic(msg.topic):
-                siteId = AudioPlayBytes.get_siteId(msg.topic)
-                requestId = AudioPlayBytes.get_requestId(msg.topic)
-                wav_bytes = bytes(msg.payload)
-
-                for message in self.handle_play(requestId, wav_bytes):
-                    if isinstance(message, AudioPlayFinished):
-                        self.publish(message, siteId=siteId)
-            elif msg.topic == AudioGetDevices.topic():
-                json_payload = json.loads(msg.payload)
-                if self._check_siteId(json_payload):
-                    result = self.handle_get_devices(
-                        AudioGetDevices.from_dict(json_payload)
-                    )
-                    if result:
-                        self.publish(result)
-        except Exception:
-            _LOGGER.exception("on_message")
-            _LOGGER.error("%s %s", msg.topic, msg.payload)
-
-    def publish(self, message: Message, **topic_args):
-        """Publish a Hermes message to MQTT."""
-        try:
-            _LOGGER.debug("-> %s", message)
-            topic = message.topic(**topic_args)
-            payload = json.dumps(attr.asdict(message))
-            _LOGGER.debug("Publishing %s char(s) to %s", len(payload), topic)
-            self.client.publish(topic, payload)
-        except Exception:
-            _LOGGER.exception("on_message")
-
-    # -------------------------------------------------------------------------
-
-    def _check_siteId(self, json_payload: typing.Dict[str, typing.Any]) -> bool:
-        if self.siteIds:
-            return json_payload.get("siteId", "default") in self.siteIds
-
-        # All sites
-        return True
+        if isinstance(message, AudioPlayBytes):
+            assert siteId and topic, "Missing siteId or topic"
+            requestId = AudioPlayBytes.get_requestId(topic)
+            sessionId = sessionId or ""
+            await self.publish_all(
+                self.handle_play(
+                    requestId, message.wav_bytes, siteId=siteId, sessionId=sessionId
+                )
+            )
+        elif isinstance(message, AudioGetDevices):
+            await self.publish_all(self.handle_get_devices(message))
+        else:
+            _LOGGER.warning("Unexpected message: %s", message)

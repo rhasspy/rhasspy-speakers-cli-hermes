@@ -1,5 +1,6 @@
 """Hermes MQTT service for Rhasspy audio output with external program."""
 import argparse
+import asyncio
 import logging
 import shlex
 
@@ -55,6 +56,8 @@ def main():
         if args.list_command:
             args.list_command = shlex.split(args.list_command)
 
+        loop = asyncio.get_event_loop()
+
         # Listen for messages
         client = mqtt.Client()
         hermes = SpeakersHermesMqtt(
@@ -62,25 +65,15 @@ def main():
             args.play_command,
             list_command=args.list_command,
             siteIds=args.siteId,
+            loop=loop,
         )
-
-        def on_disconnect(client, userdata, flags, rc):
-            try:
-                # Automatically reconnect
-                _LOGGER.info("Disconnected. Trying to reconnect...")
-                client.reconnect()
-            except Exception:
-                _LOGGER.exception("on_disconnect")
-
-        # Connect
-        client.on_connect = hermes.on_connect
-        client.on_message = hermes.on_message
-        client.on_disconnect = on_disconnect
 
         _LOGGER.debug("Connecting to %s:%s", args.host, args.port)
         client.connect(args.host, args.port)
+        client.loop_start()
 
-        client.loop_forever()
+        # Run event loop
+        hermes.loop.run_forever()
     except KeyboardInterrupt:
         pass
     finally:
