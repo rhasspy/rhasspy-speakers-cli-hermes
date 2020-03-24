@@ -14,7 +14,7 @@ from rhasspyhermes.audioserver import (
     AudioPlayFinished,
 )
 from rhasspyhermes.base import Message
-from rhasspyhermes.client import HermesClient, TopicArgs
+from rhasspyhermes.client import GeneratorType, HermesClient, TopicArgs
 
 _LOGGER = logging.getLogger("rhasspyspeakers_cli_hermes")
 
@@ -120,18 +120,18 @@ class SpeakersHermesMqtt(HermesClient):
         siteId: typing.Optional[str] = None,
         sessionId: typing.Optional[str] = None,
         topic: typing.Optional[str] = None,
-    ):
+    ) -> GeneratorType:
         """Received message from MQTT broker."""
         if isinstance(message, AudioPlayBytes):
             assert siteId and topic, "Missing siteId or topic"
             requestId = AudioPlayBytes.get_requestId(topic)
             sessionId = sessionId or ""
-            await self.publish_all(
-                self.handle_play(
-                    requestId, message.wav_bytes, siteId=siteId, sessionId=sessionId
-                )
-            )
+            async for play_result in self.handle_play(
+                requestId, message.wav_bytes, siteId=siteId, sessionId=sessionId
+            ):
+                yield play_result
         elif isinstance(message, AudioGetDevices):
-            await self.publish_all(self.handle_get_devices(message))
+            async for device_result in self.handle_get_devices(message):
+                yield device_result
         else:
             _LOGGER.warning("Unexpected message: %s", message)
