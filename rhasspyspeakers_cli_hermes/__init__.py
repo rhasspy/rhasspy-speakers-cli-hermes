@@ -12,6 +12,8 @@ from rhasspyhermes.audioserver import (
     AudioGetDevices,
     AudioPlayBytes,
     AudioPlayFinished,
+    AudioToggleOff,
+    AudioToggleOn,
 )
 from rhasspyhermes.base import Message
 from rhasspyhermes.client import GeneratorType, HermesClient, TopicArgs
@@ -36,10 +38,12 @@ class SpeakersHermesMqtt(HermesClient):
             "rhasspyspeakers_cli_hermes", client, siteIds=siteIds, loop=loop
         )
 
-        self.subscribe(AudioPlayBytes, AudioGetDevices)
+        self.subscribe(AudioPlayBytes, AudioGetDevices, AudioToggleOff, AudioToggleOn)
 
         self.play_command = play_command
         self.list_command = list_command
+
+        self.enabled = True
 
         # Event loop
         self.loop = loop or asyncio.get_event_loop()
@@ -55,8 +59,11 @@ class SpeakersHermesMqtt(HermesClient):
     ) -> typing.AsyncIterable[typing.Tuple[AudioPlayFinished, TopicArgs]]:
         """Play WAV using external program."""
         try:
-            _LOGGER.debug(self.play_command)
-            subprocess.run(self.play_command, input=wav_bytes, check=True)
+            if self.enabled:
+                _LOGGER.debug(self.play_command)
+                subprocess.run(self.play_command, input=wav_bytes, check=True)
+            else:
+                _LOGGER.debug("Not playing (audio disabled)")
         except Exception:
             _LOGGER.exception("handle_play")
         finally:
@@ -133,5 +140,11 @@ class SpeakersHermesMqtt(HermesClient):
         elif isinstance(message, AudioGetDevices):
             async for device_result in self.handle_get_devices(message):
                 yield device_result
+        elif isinstance(message, AudioToggleOff):
+            self.enabled = False
+            _LOGGER.debug("Disabled audio")
+        elif isinstance(message, AudioToggleOn):
+            self.enabled = True
+            _LOGGER.debug("Enabled audio")
         else:
             _LOGGER.warning("Unexpected message: %s", message)
