@@ -1,5 +1,4 @@
 """Hermes MQTT server for Rhasspy audio output using external program"""
-import asyncio
 import logging
 import re
 import subprocess
@@ -32,11 +31,8 @@ class SpeakersHermesMqtt(HermesClient):
         play_command: typing.List[str],
         list_command: typing.Optional[typing.List[str]] = None,
         siteIds: typing.Optional[typing.List[str]] = None,
-        loop=None,
     ):
-        super().__init__(
-            "rhasspyspeakers_cli_hermes", client, siteIds=siteIds, loop=loop
-        )
+        super().__init__("rhasspyspeakers_cli_hermes", client, siteIds=siteIds)
 
         self.subscribe(AudioPlayBytes, AudioGetDevices, AudioToggleOff, AudioToggleOn)
 
@@ -44,9 +40,6 @@ class SpeakersHermesMqtt(HermesClient):
         self.list_command = list_command
 
         self.enabled = True
-
-        # Event loop
-        self.loop = loop or asyncio.get_event_loop()
 
     # -------------------------------------------------------------------------
 

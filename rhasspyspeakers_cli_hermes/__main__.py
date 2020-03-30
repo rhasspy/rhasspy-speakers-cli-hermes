@@ -36,8 +36,6 @@ def main():
         if args.list_command:
             args.list_command = shlex.split(args.list_command)
 
-        loop = asyncio.get_event_loop()
-
         # Listen for messages
         client = mqtt.Client()
         hermes = SpeakersHermesMqtt(
@@ -45,7 +43,6 @@ def main():
             args.play_command,
             list_command=args.list_command,
             siteIds=args.siteId,
-            loop=loop,
         )
 
         _LOGGER.debug("Connecting to %s:%s", args.host, args.port)
@@ -53,11 +50,12 @@ def main():
         client.loop_start()
 
         # Run event loop
-        hermes.loop.run_forever()
+        asyncio.run(hermes.handle_messages_async())
     except KeyboardInterrupt:
         pass
     finally:
         _LOGGER.debug("Shutting down")
+        client.loop_stop()
 
 
 # -----------------------------------------------------------------------------
