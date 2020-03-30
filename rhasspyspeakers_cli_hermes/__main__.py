@@ -30,25 +30,22 @@ def main():
     hermes_cli.setup_logging(args)
     _LOGGER.debug(args)
 
+    args.play_command = shlex.split(args.play_command)
+
+    if args.list_command:
+        args.list_command = shlex.split(args.list_command)
+
+    # Listen for messages
+    client = mqtt.Client()
+    hermes = SpeakersHermesMqtt(
+        client, args.play_command, list_command=args.list_command, siteIds=args.siteId
+    )
+
+    _LOGGER.debug("Connecting to %s:%s", args.host, args.port)
+    hermes_cli.connect(client, args)
+    client.loop_start()
+
     try:
-        args.play_command = shlex.split(args.play_command)
-
-        if args.list_command:
-            args.list_command = shlex.split(args.list_command)
-
-        # Listen for messages
-        client = mqtt.Client()
-        hermes = SpeakersHermesMqtt(
-            client,
-            args.play_command,
-            list_command=args.list_command,
-            siteIds=args.siteId,
-        )
-
-        _LOGGER.debug("Connecting to %s:%s", args.host, args.port)
-        hermes_cli.connect(client, args)
-        client.loop_start()
-
         # Run event loop
         asyncio.run(hermes.handle_messages_async())
     except KeyboardInterrupt:
