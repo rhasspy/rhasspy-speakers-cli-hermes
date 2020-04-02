@@ -10,6 +10,7 @@ from rhasspyhermes.audioserver import (
     AudioDevices,
     AudioGetDevices,
     AudioPlayBytes,
+    AudioPlayError,
     AudioPlayFinished,
     AudioToggleOff,
     AudioToggleOn,
@@ -49,7 +50,9 @@ class SpeakersHermesMqtt(HermesClient):
         wav_bytes: bytes,
         siteId: str = "default",
         sessionId: str = "",
-    ) -> typing.AsyncIterable[typing.Tuple[AudioPlayFinished, TopicArgs]]:
+    ) -> typing.AsyncIterable[
+        typing.Union[typing.Tuple[AudioPlayFinished, TopicArgs], AudioPlayError]
+    ]:
         """Play WAV using external program."""
         try:
             if self.enabled:
@@ -57,8 +60,11 @@ class SpeakersHermesMqtt(HermesClient):
                 subprocess.run(self.play_command, input=wav_bytes, check=True)
             else:
                 _LOGGER.debug("Not playing (audio disabled)")
-        except Exception:
+        except Exception as e:
             _LOGGER.exception("handle_play")
+            yield AudioPlayError(
+                error=str(e), context=requestId, siteId=siteId, sessionId=sessionId
+            )
         finally:
             yield (
                 AudioPlayFinished(id=requestId, sessionId=sessionId),
@@ -67,7 +73,7 @@ class SpeakersHermesMqtt(HermesClient):
 
     async def handle_get_devices(
         self, get_devices: AudioGetDevices
-    ) -> typing.AsyncIterable[AudioDevices]:
+    ) -> typing.AsyncIterable[typing.Union[AudioDevices, AudioPlayError]]:
         """Get available speakers."""
         if get_devices.modes and (AudioDeviceMode.OUTPUT not in get_devices.modes):
             return
@@ -105,8 +111,11 @@ class SpeakersHermesMqtt(HermesClient):
 
                     name = line.strip()
 
-        except Exception:
+        except Exception as e:
             _LOGGER.exception("handle_get_devices")
+            yield AudioPlayError(
+                error=str(e), context=get_devices.id, siteId=get_devices.siteId
+            )
 
         yield AudioDevices(
             devices=devices, id=get_devices.id, siteId=get_devices.siteId
