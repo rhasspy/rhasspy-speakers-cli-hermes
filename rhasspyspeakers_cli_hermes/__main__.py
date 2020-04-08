@@ -38,7 +38,7 @@ def main():
     # Listen for messages
     client = mqtt.Client()
     hermes = SpeakersHermesMqtt(
-        client, args.play_command, list_command=args.list_command, siteIds=args.siteId
+        client, args.play_command, list_command=args.list_command, site_ids=args.site_id
     )
 
     _LOGGER.debug("Connecting to %s:%s", args.host, args.port)

@@ -31,9 +31,9 @@ class SpeakersHermesMqtt(HermesClient):
         client,
         play_command: typing.List[str],
         list_command: typing.Optional[typing.List[str]] = None,
-        siteIds: typing.Optional[typing.List[str]] = None,
+        site_ids: typing.Optional[typing.List[str]] = None,
     ):
-        super().__init__("rhasspyspeakers_cli_hermes", client, siteIds=siteIds)
+        super().__init__("rhasspyspeakers_cli_hermes", client, site_ids=site_ids)
 
         self.subscribe(AudioPlayBytes, AudioGetDevices, AudioToggleOff, AudioToggleOn)
 
@@ -46,10 +46,10 @@ class SpeakersHermesMqtt(HermesClient):
 
     async def handle_play(
         self,
-        requestId: str,
+        request_id: str,
         wav_bytes: bytes,
-        siteId: str = "default",
-        sessionId: str = "",
+        site_id: str = "default",
+        session_id: str = "",
     ) -> typing.AsyncIterable[
         typing.Union[typing.Tuple[AudioPlayFinished, TopicArgs], AudioPlayError]
     ]:
@@ -63,12 +63,12 @@ class SpeakersHermesMqtt(HermesClient):
         except Exception as e:
             _LOGGER.exception("handle_play")
             yield AudioPlayError(
-                error=str(e), context=requestId, siteId=siteId, sessionId=sessionId
+                error=str(e), context=request_id, site_id=site_id, session_id=session_id
             )
         finally:
             yield (
-                AudioPlayFinished(id=requestId, sessionId=sessionId),
-                {"siteId": siteId},
+                AudioPlayFinished(id=request_id, session_id=session_id),
+                {"site_id": site_id},
             )
 
     async def handle_get_devices(
@@ -114,11 +114,11 @@ class SpeakersHermesMqtt(HermesClient):
         except Exception as e:
             _LOGGER.exception("handle_get_devices")
             yield AudioPlayError(
-                error=str(e), context=get_devices.id, siteId=get_devices.siteId
+                error=str(e), context=get_devices.id, site_id=get_devices.site_id
             )
 
         yield AudioDevices(
-            devices=devices, id=get_devices.id, siteId=get_devices.siteId
+            devices=devices, id=get_devices.id, site_id=get_devices.site_id
         )
 
     # -------------------------------------------------------------------------
@@ -126,17 +126,17 @@ class SpeakersHermesMqtt(HermesClient):
     async def on_message(
         self,
         message: Message,
-        siteId: typing.Optional[str] = None,
-        sessionId: typing.Optional[str] = None,
+        site_id: typing.Optional[str] = None,
+        session_id: typing.Optional[str] = None,
         topic: typing.Optional[str] = None,
     ) -> GeneratorType:
         """Received message from MQTT broker."""
         if isinstance(message, AudioPlayBytes):
-            assert siteId and topic, "Missing siteId or topic"
-            requestId = AudioPlayBytes.get_requestId(topic)
-            sessionId = sessionId or ""
+            assert site_id and topic, "Missing site_id or topic"
+            request_id = AudioPlayBytes.get_request_id(topic)
+            session_id = session_id or ""
             async for play_result in self.handle_play(
-                requestId, message.wav_bytes, siteId=siteId, sessionId=sessionId
+                request_id, message.wav_bytes, site_id=site_id, session_id=session_id
             ):
                 yield play_result
         elif isinstance(message, AudioGetDevices):
