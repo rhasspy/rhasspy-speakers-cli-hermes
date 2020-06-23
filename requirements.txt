@@ -1,2 +1,2 @@
 paho-mqtt==1.5.0
-rhasspy-hermes==0.2.1
+rhasspy-hermes~=0.3.0
