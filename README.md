@@ -5,51 +5,25 @@
 
 Implements `hermes/audioServer` output functionality from [Hermes protocol](https://docs.snips.ai/reference/hermes) using an external program like `aplay`.
 
-## Running With Docker
+## Requirements
+
+* Python 3.7
+
+## Installation
 
 ```bash
-docker run -it rhasspy/rhasspy-speakers-cli-hermes:<VERSION> <ARGS>
+$ git clone https://github.com/rhasspy/rhasspy-speakers-cli-hermes
+$ cd rhasspy-speakers-cli-hermes
+$ ./configure
+$ make
+$ make install
 ```
 
-## Building From Source
-
-Clone the repository and create the virtual environment:
+## Running
 
 ```bash
-git clone https://github.com/rhasspy/rhasspy-speakers-cli-hermes.git
-cd rhasspy-speakers-cli-hermes
-make venv
+$ bin/rhasspy-speakers-cli-hermes <ARGS>
 ```
-
-Run the `bin/rhasspy-speakers-cli-hermes` script to access the command-line interface:
-
-```bash
-bin/rhasspy-speakers-cli-hermes --help
-```
-
-## Building the Debian Package
-
-Follow the instructions to build from source, then run:
-
-```bash
-source .venv/bin/activate
-make debian
-```
-
-If successful, you'll find a `.deb` file in the `dist` directory that can be installed with `apt`.
-
-## Building the Docker Image
-
-Follow the instructions to build from source, then run:
-
-```bash
-source .venv/bin/activate
-make docker
-```
-
-This will create a Docker image tagged `rhasspy/rhasspy-speakers-cli-hermes:<VERSION>` where `VERSION` comes from the file of the same name in the source root directory.
-
-NOTE: If you add things to the Docker image, make sure to whitelist them in `.dockerignore`.
 
 ## Command-Line Options
 
