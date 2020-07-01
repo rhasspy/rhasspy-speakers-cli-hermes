@@ -1,6 +1,6 @@
 *
-!pyinstaller/dist
-!debian/bin
-!requirements.txt
+!bin/rhasspy-speakers-cli-hermes
 !rhasspyspeakers_cli_hermes/*.py
-!etc/
+!requirements.txt
+!Makefile
+!scripts/create-venv.sh
