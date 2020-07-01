@@ -1,6 +1,6 @@
 SHELL := bash
 
-.PHONY: reformat check dist install
+.PHONY: reformat check dist sdist install test deploy
 
 all:
 
@@ -24,3 +24,7 @@ sdist:
 
 test:
 	scripts/run-tests.sh
+
+deploy:
+	docker login --username rhasspy --password "$$DOCKER_PASSWORD"
+	scripts/build-docker.sh
