@@ -5,6 +5,7 @@ import logging
 import shlex
 
 import paho.mqtt.client as mqtt
+
 import rhasspyhermes.cli as hermes_cli
 
 from . import SpeakersHermesMqtt
