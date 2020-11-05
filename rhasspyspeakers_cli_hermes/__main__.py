@@ -24,6 +24,9 @@ def main():
     parser.add_argument(
         "--list-command", help="Command to list available output devices"
     )
+    parser.add_argument(
+        "--volume", type=float, default=1.0, help="Volume scale to apply to all audio"
+    )
 
     hermes_cli.add_hermes_args(parser)
     args = parser.parse_args()
@@ -39,7 +42,11 @@ def main():
     # Listen for messages
     client = mqtt.Client()
     hermes = SpeakersHermesMqtt(
-        client, args.play_command, list_command=args.list_command, site_ids=args.site_id
+        client,
+        args.play_command,
+        list_command=args.list_command,
+        volume=args.volume,
+        site_ids=args.site_id,
     )
 
     _LOGGER.debug("Connecting to %s:%s", args.host, args.port)

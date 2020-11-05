@@ -17,6 +17,7 @@ from rhasspyhermes.audioserver import (
     AudioPlayBytes,
     AudioPlayError,
     AudioPlayFinished,
+    AudioSetVolume,
     AudioToggleOff,
     AudioToggleOn,
 )
@@ -36,14 +37,22 @@ class SpeakersHermesMqtt(HermesClient):
         client,
         play_command: typing.List[str],
         list_command: typing.Optional[typing.List[str]] = None,
+        volume: float = 1.0,
         site_ids: typing.Optional[typing.List[str]] = None,
     ):
         super().__init__("rhasspyspeakers_cli_hermes", client, site_ids=site_ids)
 
-        self.subscribe(AudioPlayBytes, AudioGetDevices, AudioToggleOff, AudioToggleOn)
+        self.subscribe(
+            AudioPlayBytes,
+            AudioGetDevices,
+            AudioToggleOff,
+            AudioToggleOn,
+            AudioSetVolume,
+        )
 
         self.play_command = play_command
         self.list_command = list_command
+        self.volume = volume
 
         self.enabled = True
 
@@ -64,7 +73,9 @@ class SpeakersHermesMqtt(HermesClient):
                 _LOGGER.debug(self.play_command)
 
                 # Check for volume in WAV INFO chunk
-                wav_bytes = SpeakersHermesMqtt.maybe_change_volume(wav_bytes)
+                wav_bytes = SpeakersHermesMqtt.maybe_change_volume(
+                    wav_bytes, master_volume=self.volume
+                )
 
                 subprocess.run(self.play_command, input=wav_bytes, check=True)
             else:
@@ -157,13 +168,17 @@ class SpeakersHermesMqtt(HermesClient):
         elif isinstance(message, AudioToggleOn):
             self.enabled = True
             _LOGGER.debug("Enabled audio")
+        elif isinstance(message, AudioSetVolume):
+            old_volume = self.volume
+            self.volume = message.volume
+            _LOGGER.debug("Volume set to %s (was %s)", self.volume, old_volume)
         else:
             _LOGGER.warning("Unexpected message: %s", message)
 
     # -------------------------------------------------------------------------
 
     @staticmethod
-    def maybe_change_volume(wav_bytes: bytes) -> bytes:
+    def maybe_change_volume(wav_bytes: bytes, master_volume: float = 1.0) -> bytes:
         """
         Look for an INFO chunk in WAV.
         If in contains a JSON object with a 'volume' property, scale amplitude
@@ -172,13 +187,13 @@ class SpeakersHermesMqtt(HermesClient):
         try:
             with io.BytesIO(wav_bytes) as wav_in_io:
                 info_data = wavchunk.get_chunk(wav_in_io)
-                if not info_data:
-                    # No INFO
-                    return wav_bytes
+                volume = master_volume
 
-                # Interpret contents as JSON
-                info_obj = json.loads(info_data)
-                volume = max(0, float(info_obj.get("volume", 1.0)))
+                if info_data:
+                    # Interpret contents as JSON
+                    info_obj = json.loads(info_data)
+                    volume = max(0, float(info_obj.get("volume", 1.0))) * master_volume
+
                 if volume != 1.0:
                     # Transform amplitude
                     wav_in_io.seek(0)
@@ -209,6 +224,9 @@ class SpeakersHermesMqtt(HermesClient):
                                 )
 
                         wav_bytes = wav_out_io.getvalue()
+                        _LOGGER.debug(
+                            "Final volume is %s (master=%s)", volume, master_volume
+                        )
 
         except Exception:
             _LOGGER.exception("maybe_change_volume")
