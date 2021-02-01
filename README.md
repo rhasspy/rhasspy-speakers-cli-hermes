@@ -30,7 +30,7 @@ $ bin/rhasspy-speakers-cli-hermes <ARGS>
 ```
 usage: rhasspy-speakers-cli-hermes [-h] --play-command PLAY_COMMAND
                                    [--host HOST] [--port PORT]
-                                   [--siteId SITEID] [--debug]
+                                   [--site-id SITEID] [--debug]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -38,6 +38,6 @@ optional arguments:
                         Command to play WAV data from stdin
   --host HOST           MQTT host (default: localhost)
   --port PORT           MQTT port (default: 1883)
-  --siteId SITEID       Hermes siteId(s) to listen for (default: all)
+  --site-id SITEID       Hermes siteId(s) to listen for (default: all)
   --debug               Print DEBUG messages to the console
 ```
