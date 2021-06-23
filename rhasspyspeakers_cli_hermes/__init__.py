@@ -8,7 +8,6 @@ import subprocess
 import typing
 import wave
 
-import wavchunk
 from rhasspyhermes.audioserver import (
     AudioDevice,
     AudioDeviceMode,
@@ -23,6 +22,8 @@ from rhasspyhermes.audioserver import (
 )
 from rhasspyhermes.base import Message
 from rhasspyhermes.client import GeneratorType, HermesClient, TopicArgs
+
+import wavchunk
 
 _LOGGER = logging.getLogger("rhasspyspeakers_cli_hermes")
 
