@@ -15,25 +15,15 @@
 #
 # armv6 images (Raspberry Pi 0/1) are derived from balena base images:
 # https://www.balena.io/docs/reference/base-images/base-images/#balena-base-images
-#
-# The IFDEF statements are handled by docker/preprocess.sh. These are just
-# comments that are uncommented if the environment variable after the IFDEF is
-# not empty.
-#
-# The build-docker.sh script will optionally add apt/pypi proxies running locally:
-# * apt - https://docs.docker.com/engine/examples/apt-cacher-ng/ 
-# * pypi - https://github.com/jayfk/docker-pypi-cache
 # -----------------------------------------------------------------------------
 
-FROM ubuntu:eoan as build-ubuntu
+FROM debian:buster as build-ubuntu
 
 ENV LANG C.UTF-8
+ENV DEBIAN_FRONTEND=noninteractive
 
-# IFDEF PROXY
-#! RUN echo 'Acquire::http { Proxy "http://${PROXY}"; };' >> /etc/apt/apt.conf.d/01proxy
-# ENDIF
-
-RUN apt-get update && \
+RUN --mount=type=cache,id=apt-build,target=/var/cache/apt \
+    apt-get update && \
     apt-get install --no-install-recommends --yes \
         python3 python3-setuptools python3-pip python3-venv \
         make
@@ -46,13 +36,10 @@ FROM build-ubuntu as build-arm64
 
 # -----------------------------------------------------------------------------
 
-FROM balenalib/raspberry-pi-debian-python:3.7-buster-build-20200604 as build-armv6
+FROM balenalib/raspberry-pi-debian-python:3.7-buster-build as build-armv6
 
 ENV LANG C.UTF-8
-
-# IFDEF PROXY
-#! RUN echo 'Acquire::http { Proxy "http://${PROXY}"; };' >> /etc/apt/apt.conf.d/01proxy
-# ENDIF
+ENV DEBIAN_FRONTEND=noninteractive
 
 # -----------------------------------------------------------------------------
 # Build
@@ -67,29 +54,20 @@ ENV APP_DIR=/usr/lib/rhasspy-speakers-cli-hermes
 COPY requirements.txt Makefile ${APP_DIR}/
 COPY scripts/ ${APP_DIR}/scripts/
 
-# IFDEF PYPI
-#! ENV PIP_INDEX_URL=http://${PYPI}/simple/
-#! ENV PIP_TRUSTED_HOST=${PYPI_HOST}
-# ENDIF
-
-RUN cd ${APP_DIR} && \
+RUN --mount=type=cache,id=pip-build,target=/root/.cache/pip \
+    cd ${APP_DIR} && \
+    ./configure && \
+    make && \
     make install
-
-# Strip binaries and shared libraries
-RUN (find ${APP_DIR} -type f -name '*.so*' -print0 | xargs -0 strip --strip-unneeded -- 2>/dev/null) || true
-RUN (find ${APP_DIR} -type f -executable -print0 | xargs -0 strip --strip-unneeded -- 2>/dev/null) || true
 
 # -----------------------------------------------------------------------------
 
-FROM ubuntu:eoan as run-ubuntu
+FROM debian:buster as run-ubuntu
 
 ENV LANG C.UTF-8
 
-# IFDEF PROXY
-#! RUN echo 'Acquire::http { Proxy "http://${PROXY}"; };' >> /etc/apt/apt.conf.d/01proxy
-# ENDIF
-
-RUN apt-get update && \
+RUN --mount=type=cache,id=apt-run,target=/var/apt/cache \
+    apt-get update && \
     apt-get install --yes --no-install-recommends \
         python3 alsa-utils
 
@@ -101,15 +79,12 @@ FROM run-ubuntu as run-arm64
 
 # -----------------------------------------------------------------------------
 
-FROM balenalib/raspberry-pi-debian-python:3.7-buster-run-20200604 as run-armv6
+FROM balenalib/raspberry-pi-debian-python:3.7-buster-run as run-armv6
 
 ENV LANG C.UTF-8
 
-# IFDEF PROXY
-#! RUN echo 'Acquire::http { Proxy "http://${PROXY}"; };' >> /etc/apt/apt.conf.d/01proxy
-# ENDIF
-
-RUN install_packages alsa-utils
+RUN --mount=type=cache,id=apt-run-armv6,target=/var/apt/cache \
+    install_packages alsa-utils
 
 # -----------------------------------------------------------------------------
 # Run
