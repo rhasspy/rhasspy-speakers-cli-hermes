@@ -18,11 +18,16 @@
 # -----------------------------------------------------------------------------
 
 FROM debian:buster as build-ubuntu
+ARG TARGETARCH
+ARG TARGETVARIANT
 
 ENV LANG C.UTF-8
 ENV DEBIAN_FRONTEND=noninteractive
 
+RUN echo "Dir::Cache var/cache/apt/${TARGETARCH}${TARGETVARIANT};" > /etc/apt/apt.conf.d/01cache
+
 RUN --mount=type=cache,id=apt-build,target=/var/cache/apt \
+    mkdir -p /var/cache/apt/${TARGETARCH}${TARGETVARIANT}/archives/partial && \
     apt-get update && \
     apt-get install --no-install-recommends --yes \
         python3 python3-setuptools python3-pip python3-venv \
@@ -51,7 +56,7 @@ FROM build-$TARGETARCH$TARGETVARIANT as build
 
 ENV APP_DIR=/usr/lib/rhasspy-speakers-cli-hermes
 
-COPY requirements.txt Makefile ${APP_DIR}/
+COPY requirements.txt Makefile configure ${APP_DIR}/
 COPY scripts/ ${APP_DIR}/scripts/
 
 RUN --mount=type=cache,id=pip-build,target=/root/.cache/pip \
@@ -63,10 +68,15 @@ RUN --mount=type=cache,id=pip-build,target=/root/.cache/pip \
 # -----------------------------------------------------------------------------
 
 FROM debian:buster as run-ubuntu
+ARG TARGETARCH
+ARG TARGETVARIANT
 
 ENV LANG C.UTF-8
 
+RUN echo "Dir::Cache var/cache/apt/${TARGETARCH}${TARGETVARIANT};" > /etc/apt/apt.conf.d/01cache
+
 RUN --mount=type=cache,id=apt-run,target=/var/apt/cache \
+    mkdir -p /var/cache/apt/${TARGETARCH}${TARGETVARIANT}/archives/partial && \
     apt-get update && \
     apt-get install --yes --no-install-recommends \
         python3 alsa-utils

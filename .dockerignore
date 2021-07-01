@@ -3,4 +3,5 @@
 !rhasspyspeakers_cli_hermes/*.py
 !requirements.txt
 !Makefile
+!configure
 !scripts/create-venv.sh
