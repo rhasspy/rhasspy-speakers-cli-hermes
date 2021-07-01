@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+args=()
+image='rhasspy/rhasspy-speakers-cli-hermes'
+tag='latest'
+
+while [[ -n "$1" ]]; do
+    if [[ "$1" == '--update' ]]; then
+        # Update Docker image
+        update='1'
+    else
+        args+=("$1")
+    fi
+
+    shift 1
+done
+
+if [[ -n "${update}" ]]; then
+    docker pull "${image}:${tag}"
+fi
+
+docker run \
+       -it \
+       --entrypoint bash \
+       --network host \
+       --device /dev/snd:/dev/snd \
+       "${image}:${tag}" \
+       "${args[@]}"
