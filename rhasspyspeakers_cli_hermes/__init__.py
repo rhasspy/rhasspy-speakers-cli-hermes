@@ -5,9 +5,12 @@ import json
 import logging
 import re
 import subprocess
+import tempfile
 import typing
 import wave
 
+import audioread
+import soundfile
 from rhasspyhermes.audioserver import (
     AudioDevice,
     AudioDeviceMode,
@@ -56,13 +59,14 @@ class SpeakersHermesMqtt(HermesClient):
         self.volume = volume
 
         self.enabled = True
+        self.audioread_backends = audioread.available_backends()
 
     # -------------------------------------------------------------------------
 
     async def handle_play(
         self,
         request_id: str,
-        wav_bytes: bytes,
+        sound_bytes: bytes,
         site_id: str = "default",
         session_id: str = "",
     ) -> typing.AsyncIterable[
@@ -72,6 +76,9 @@ class SpeakersHermesMqtt(HermesClient):
         try:
             if self.enabled:
                 _LOGGER.debug(self.play_command)
+
+                # Convert to WAV
+                wav_bytes = self.convert_to_wav(sound_bytes)
 
                 # Check for volume in WAV INFO chunk
                 wav_bytes = SpeakersHermesMqtt.maybe_change_volume(
@@ -233,3 +240,39 @@ class SpeakersHermesMqtt(HermesClient):
             _LOGGER.exception("maybe_change_volume")
 
         return wav_bytes
+
+    def convert_to_wav(self, sound_bytes: bytes) -> bytes:
+        """Convert sound file to WAV format"""
+        try:
+            # Try as WAV first
+            with io.BytesIO(sound_bytes) as sound_io, wave.open(sound_io, "rb"):
+                # Already a WAV file
+                return sound_bytes
+        except Exception:
+            # Try soundfile
+            try:
+                with io.BytesIO(sound_bytes) as sound_file, io.BytesIO() as wav_out:
+                    audio_data, sample_rate = soundfile.read(sound_file)
+                    soundfile.write(wav_out, audio_data, sample_rate, format="WAV")
+                    return wav_out.getvalue()
+            except Exception:
+                # Fall back to audioread (which only supports paths)
+                with tempfile.NamedTemporaryFile(mode="wb+") as temp_file:
+                    temp_file.write(sound_bytes)
+                    temp_file.seek(0)
+
+                    with audioread.audio_open(
+                        temp_file.name, backends=self.audioread_backends
+                    ) as sound_file, io.BytesIO() as wav_io:
+                        wav_write: wave.Wave_write = wave.open(wav_io, "wb")
+                        with wav_write:
+                            wav_write.setnchannels(sound_file.channels)  # type: ignore
+                            wav_write.setframerate(
+                                sound_file.samplerate  # type: ignore
+                            )
+                            wav_write.setsampwidth(2)  # fixed at 16-bits by audioread
+
+                            for sound_buffer in sound_file:
+                                wav_write.writeframes(sound_buffer)
+
+                        return wav_io.getvalue()
